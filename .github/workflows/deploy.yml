@@ -11,6 +11,9 @@ jobs:
   test:
     environment: testing
     runs-on: ubuntu-latest
+    container: 
+      image: node:16  #To run job on container this key must exist (note this is from docker hub)
+#     env:   #these are env for image used (check dockerhub ) 
     env:
       MONGODB_CONNECTION_PROTOCOL: mongodb+srv
       MONGODB_CLUSTER_ADDRESS: cluster0.vsq4l.mongodb.net
