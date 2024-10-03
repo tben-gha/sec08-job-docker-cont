@@ -1,0 +1,61 @@
+name: Deployment (non Container)
+on:
+  push:
+    branches:
+      - main
+      - dev
+env:
+  CACHE_KEY: node-deps
+  MONGODB_DB_NAME: gha-demo
+jobs:
+  test:
+    environment: testing
+    runs-on: ubuntu-latest
+    #In this EG Job is running on the runner direct 
+
+#    container: 
+#      image: node:16  #To run job on container this key must exist (note this is from docker hub)
+#      env:   #these are env for image used (check dockerhub ) 
+    env:
+      MONGODB_CONNECTION_PROTOCOL: mongodb
+      MONGODB_CLUSTER_ADDRESS: 127.0.0.1:27017   #u can refer directly as this job is already in container 
+      MONGODB_USERNAME: root  #follow service containers
+      MONGODB_PASSWORD: example
+      PORT: 8080
+    services: #This is where service containers are added (IE DB) 1 job one services group 
+      mongoDB: 
+        image: mongo  #Each service must have image
+        ports:
+          - 27017:27017 #U need to openthis port to your runner for it to be accessible 
+        env:  #These env are used for the image (check dockerhub for required env)
+          MONGO_INITDB_ROOT_USERNAME: root 
+          MONGO_INITDB_ROOT_PASSWORD: example 
+
+    steps:
+      - name: Get Code
+        uses: actions/checkout@v3
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Run server
+        run: npm start & npx wait-on http://127.0.0.1:$PORT # requires MongoDB Atlas to accept requests from anywhere!
+      - name: Run tests
+        run: npm test
+      - name: Output information
+        run: |
+          echo "MONGODB_USERNAME: $MONGODB_USERNAME"
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output information
+        env:
+          PORT: 3000
+        run: |        
+          echo "MONGODB_DB_NAME: $MONGODB_DB_NAME"
+          echo "MONGODB_USERNAME: $MONGODB_USERNAME"
+          echo "${{ env.PORT }}"
